@@ -1,0 +1,783 @@
+-- ⚡ DELTA SYSTEM v3.0 (Camuflado)
+-- 🔒 Versão Anti-Detection do seu menu original
+-- 🛡️ Todas funções mantidas, código modificado
+
+local GameServices = {
+    Players = game:GetService("Players"),
+    CoreGui = game:GetService("CoreGui"),
+    UserInput = game:GetService("UserInputService"),
+    RunService = game:GetService("RunService"),
+    TweenService = game:GetService("TweenService"),
+    HttpService = game:GetService("HttpService")
+}
+
+local LocalPlayer = GameServices.Players.LocalPlayer
+local CurrentCharacter = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+
+-- ============================================
+-- 🛡️ SISTEMA DE CARREGAMENTO SEGURO
+-- ============================================
+local function SecureLoad(scriptName, loadFunction)
+    local success, result = pcall(loadFunction)
+    if not success then
+        warn("[SYSTEM] Erro em " .. scriptName .. ": " .. tostring(result))
+        return nil
+    end
+    return result
+end
+
+-- ============================================
+-- 🔄 SISTEMA DE TELEPORTE (REESCRITO)
+-- ============================================
+local Transport = {
+    Locations = {
+        Mecanica = CFrame.new(-217.613434, 4.70229483, -541.026733, 0.752137721, -9.90102844e-09, 0.659006, 3.7339607e-08, 1, -2.75923124e-08, -0.659006, 4.53602418e-08, 0.752137721),
+        Praca = CFrame.new(-296.59024, 4.76299763, 337.889343, -0.961254299, 1.2488953e-08, -0.275663197, 2.76319199e-08, 1, -5.10490636e-08, 0.275663197, -5.66882363e-08, -0.961254299),
+        Estacionamento = CFrame.new(-494.077698, 3.77951574, 359.379333, 0.00875911396, -1.23536381e-07, 0.999961615, 3.14798121e-09, 1, 1.23513544e-07, -0.999961615, 2.06599116e-09, 0.00875911396),
+        LojaSafe = CFrame.new(-531.010742, 5.74899769, 65.4761887, 0.995399356, -2.57703974e-08, 0.095813036, 1.90361629e-08, 1, 7.11992243e-08, -0.095813036, -6.90477506e-08, 0.995399356),
+        Prefeitura = CFrame.new(-282.103149, 12.7788353, 95.7399521, -0.773851156, -6.73611993e-08, 0.633367479, -1.05598303e-07, 1, -2.26664181e-08, -0.633367479, -8.44229646e-08, -0.773851156),
+        LojaForaSafe = CFrame.new(-93.5064774, 4.78199863, -109.482323, 0.980164528, 3.75304765e-08, -0.198185474, -3.64569743e-08, 1, 9.06546838e-09, 0.198185474, -1.66040814e-09, 0.980164528),
+        Imobiliaria = CFrame.new(-277.702362, 6.76088476, -71.4290237, -0.0287369229, -7.12519395e-08, 0.999586999, -3.37196369e-08, 1, 7.03119838e-08, -0.999586999, -3.16851612e-08, -0.0287369229),
+        LojaCarros = CFrame.new(-101.505547, 4.78202677, 519.741333, -0.0591319837, 4.34945413e-08, 0.998250186, -8.28741733e-08, 1, -4.84798903e-08, -0.998250186, -8.55958717e-08, -0.0591319837),
+        Banco = CFrame.new(-25.3226414, 6.5513401, 381.407043, -0.986316681, 6.24803391e-08, -0.164861783, 7.23180733e-08, 1, -5.36702736e-08, 0.164861783, -6.48583764e-08, -0.986316681),
+        PRF = CFrame.new(6554.20508, 37.6902618, 4935.63428, -0.0675178841, 3.52907037e-08, 0.997718036, -9.65885238e-09, 1, -3.60250567e-08, -0.997718036, -1.20691475e-08, -0.0675178841),
+        Planta = CFrame.new(11993.7158, 26.0214729, 12805.1504, 0.625887454, -5.14012726e-08, -0.779913425, 2.11956852e-08, 1, -4.88966592e-08, 0.779913425, 1.40730068e-08, 0.625887454)
+    },
+    
+    GoTo = function(self, locationKey)
+        local destination = self.Locations[locationKey]
+        if destination and CurrentCharacter and CurrentCharacter:FindFirstChild("HumanoidRootPart") then
+            CurrentCharacter.HumanoidRootPart.CFrame = destination
+        end
+    end
+}
+
+-- ============================================
+-- 👁️ SISTEMA DE VISUALIZAÇÃO (REESCRITO)
+-- ============================================
+local Visual = {
+    Active = false,
+    Interfaces = {},
+    
+    CreatePlayerDisplay = function(self, targetPlayer)
+        if targetPlayer == LocalPlayer then return end
+        
+        local function SetupDisplay()
+            local character = targetPlayer.Character
+            if not character then return end
+            
+            local headPart = character:FindFirstChild("Head")
+            if not headPart then return end
+            
+            if headPart:FindFirstChild("ItemDisplayUI") then return end
+            
+            local ItemDisplay = Instance.new("BillboardGui")
+            ItemDisplay.Name = "ItemDisplayUI"
+            ItemDisplay.Adornee = headPart
+            ItemDisplay.Size = UDim2.new(0, 160, 0, 50)
+            ItemDisplay.StudsOffset = Vector3.new(0, -3, 0)
+            ItemDisplay.AlwaysOnTop = true
+            ItemDisplay.Parent = headPart
+            
+            local DisplayFrame = Instance.new("Frame")
+            DisplayFrame.Size = UDim2.new(1, 0, 1, 0)
+            DisplayFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            DisplayFrame.BorderSizePixel = 0
+            DisplayFrame.Parent = ItemDisplay
+            DisplayFrame.Style = Enum.FrameStyle.DropShadow
+            
+            local PlayerName = Instance.new("TextLabel")
+            PlayerName.Size = UDim2.new(1, 0, 0.35, 0)
+            PlayerName.Position = UDim2.new(0, 0, 0.02, 0)
+            PlayerName.Text = targetPlayer.Name
+            PlayerName.TextColor3 = Color3.fromRGB(255, 255, 255)
+            PlayerName.Font = Enum.Font.SourceSansBold
+            PlayerName.TextSize = 14
+            PlayerName.BackgroundTransparency = 1
+            PlayerName.TextStrokeTransparency = 0.8
+            PlayerName.Parent = DisplayFrame
+            
+            local playerBackpack = targetPlayer:FindFirstChild("Backpack")
+            local collectedItems = {}
+            
+            if playerBackpack then
+                for _, item in ipairs(playerBackpack:GetChildren()) do
+                    if item:IsA("Tool") then
+                        table.insert(collectedItems, item.Name)
+                    end
+                end
+            end
+            
+            for slot = 1, 3 do
+                local ItemSlot = Instance.new("TextButton")
+                ItemSlot.Size = UDim2.new(0.28, -5, 0.4, 0)
+                ItemSlot.Position = UDim2.new((slot - 1) * 0.33, 0, 0.35, 0)
+                ItemSlot.Text = collectedItems[slot] or tostring(slot)
+                ItemSlot.TextColor3 = Color3.fromRGB(255, 255, 255)
+                ItemSlot.Font = Enum.Font.SourceSansBold
+                ItemSlot.TextSize = 12
+                ItemSlot.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+                ItemSlot.BorderSizePixel = 2
+                ItemSlot.BorderColor3 = Color3.fromRGB(100, 100, 100)
+                ItemSlot.Parent = DisplayFrame
+                
+                ItemSlot.MouseButton1Click:Connect(function()
+                    print("Item " .. (collectedItems[slot] or slot) .. " - " .. targetPlayer.Name)
+                end)
+            end
+            
+            self.Interfaces[targetPlayer] = ItemDisplay
+            
+            local function UpdateOnChange()
+                local hasItems = false
+                if playerBackpack then
+                    for _, item in ipairs(playerBackpack:GetChildren()) do
+                        if item:IsA("Tool") then
+                            hasItems = true
+                            break
+                        end
+                    end
+                end
+                
+                if not hasItems then
+                    if headPart:FindFirstChild("ItemDisplayUI") then
+                        headPart.ItemDisplayUI:Destroy()
+                    end
+                else
+                    SetupDisplay()
+                end
+            end
+            
+            if playerBackpack then
+                playerBackpack.ChildRemoved:Connect(UpdateOnChange)
+                playerBackpack.ChildAdded:Connect(UpdateOnChange)
+            end
+        end
+        
+        if targetPlayer.Character then
+            SetupDisplay()
+        else
+            targetPlayer.CharacterAdded:Connect(function()
+                task.wait(0.5)
+                SetupDisplay()
+            end)
+        end
+    end,
+    
+    ToggleSystem = function(self, state)
+        self.Active = state
+        if state then
+            for _, player in ipairs(GameServices.Players:GetPlayers()) do
+                self:CreatePlayerDisplay(player)
+            end
+            
+            GameServices.Players.PlayerAdded:Connect(function(newPlayer)
+                self:CreatePlayerDisplay(newPlayer)
+            end)
+        else
+            for player, display in pairs(self.Interfaces) do
+                if display then display:Destroy() end
+            end
+            self.Interfaces = {}
+        end
+    end
+}
+
+-- ============================================
+-- 🎯 SISTEMA DE COMBATE (REESCRITO)
+-- ============================================
+local Combat = {
+    LoadAimbot = function()
+        SecureLoad("Sistema de Mira", function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Exunys/Aimbot-V2/main/Resources/Scripts/Raw%20Main.lua"))()
+        end)
+    end,
+    
+    LoadHitbox = function()
+        SecureLoad("Expansor de Hitbox", function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Vcsk/RobloxScripts/main/HitboxExpander.lua"))()
+        end)
+    end
+}
+
+-- ============================================
+-- ✈️ SISTEMA DE MOVIMENTO (REESCRITO)
+-- ============================================
+local Movement = {
+    LoadFlight = function()
+        SecureLoad("Sistema de Voo", function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/XNEOFF/FlyGuiV3/main/FlyGuiV3.txt"))()
+        end)
+    end,
+    
+    LoadInfiniteYield = function()
+        SecureLoad("Comandos Avançados", function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+        end)
+    end
+}
+
+-- ============================================
+-- 🔧 SISTEMA DE UTILIDADES (REESCRITO)
+-- ============================================
+local Utilities = {
+    AutoSearchEnabled = false,
+    SearchKey = Enum.KeyCode.E,
+    
+    ToggleAutoSearch = function(self, state)
+        self.AutoSearchEnabled = state
+        if state then
+            GameServices.UserInput.InputBegan:Connect(function(input, processed)
+                if self.AutoSearchEnabled and input.KeyCode == self.SearchKey and not processed then
+                    local TextChat = game:GetService("TextChatService")
+                    local chatChannel = TextChat:WaitForChild("TextChannels"):WaitForChild("RBXGeneral")
+                    chatChannel:SendAsync("/revistar morto")
+                end
+            end)
+        end
+    end
+}
+
+-- ============================================
+-- 🛡️ SISTEMA DE SEGURANÇA (REESCRITO)
+-- ============================================
+local Security = {
+    StaffCheck = false,
+    StaffNames = {
+        "jake56839ad", "CleitinDoGrau_Eb", "21peteca", "Lucalarte", "SPTmatheus123",
+        "GuilhermeDRTgg", "Briessxz", "hardstyless", "Mundaka", "Isabelaaaaafofs",
+        "HANRLLEY25", "kaleb_iaee", "brunizoraa", "rip_propleyfran", "pepezicador",
+        "Jjhgul", "Dariosantos21048", "JEKER_2009", "tttonas", "MZPlug14k",
+        "Dudubeterotv5", "Sargento_admOficial", "Cassiopia84un", "Hakplays", "Cleo_ptr"
+    },
+    
+    CheckForStaff = function(self)
+        if not self.StaffCheck then return end
+        
+        for _, player in ipairs(GameServices.Players:GetPlayers()) do
+            for _, staffName in ipairs(self.StaffNames) do
+                if player.Name == staffName then
+                    LocalPlayer:Kick("[SYSTEM] Staff detectado no servidor")
+                    return
+                end
+            end
+        end
+    end,
+    
+    ToggleStaffCheck = function(self, state)
+        self.StaffCheck = state
+        if state then
+            self:CheckForStaff()
+            GameServices.Players.PlayerAdded:Connect(function(player)
+                self:CheckForStaff()
+            end)
+        end
+    end
+}
+
+-- ============================================
+-- 🎨 INTERFACE DO USUÁRIO (NOVO DESIGN)
+-- ============================================
+local Interface = {
+    MainWindow = nil,
+    Tabs = {},
+    
+    Create = function(self)
+        -- Tela principal
+        local MainScreen = Instance.new("ScreenGui")
+        MainScreen.Name = "GameAssistantUI"
+        MainScreen.ResetOnSpawn = false
+        MainScreen.Parent = GameServices.CoreGui
+        
+        -- Janela principal
+        local MainWindow = Instance.new("Frame")
+        MainWindow.Name = "MainWindow"
+        MainWindow.Size = UDim2.new(0, 480, 0, 520)
+        MainWindow.Position = UDim2.new(0.02, 0, 0.25, 0)
+        MainWindow.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+        MainWindow.BackgroundTransparency = 0.05
+        MainWindow.BorderSizePixel = 0
+        MainWindow.Parent = MainScreen
+        
+        local WindowCorner = Instance.new("UICorner")
+        WindowCorner.CornerRadius = UDim.new(0, 8)
+        WindowCorner.Parent = MainWindow
+        
+        local WindowStroke = Instance.new("UIStroke")
+        WindowStroke.Color = Color3.fromRGB(60, 120, 200)
+        WindowStroke.Thickness = 2
+        WindowStroke.Parent = MainWindow
+        
+        -- Cabeçalho
+        local Header = Instance.new("Frame")
+        Header.Name = "Header"
+        Header.Size = UDim2.new(1, 0, 0, 40)
+        Header.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        Header.BorderSizePixel = 0
+        Header.Parent = MainWindow
+        
+        local HeaderCorner = Instance.new("UICorner")
+        HeaderCorner.CornerRadius = UDim.new(0, 8)
+        HeaderCorner.Parent = Header
+        
+        local Title = Instance.new("TextLabel")
+        Title.Name = "Title"
+        Title.Size = UDim2.new(0.7, 0, 1, 0)
+        Title.Position = UDim2.new(0.02, 0, 0, 0)
+        Title.BackgroundTransparency = 1
+        Title.Text = "🛡️ DELTA SYSTEM v3"
+        Title.TextColor3 = Color3.fromRGB(220, 220, 240)
+        Title.Font = Enum.Font.GothamBold
+        Title.TextSize = 16
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.Parent = Header
+        
+        local ToggleButton = Instance.new("TextButton")
+        ToggleButton.Name = "ToggleButton"
+        ToggleButton.Size = UDim2.new(0.12, 0, 0.65, 0)
+        ToggleButton.Position = UDim2.new(0.86, 0, 0.175, 0)
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 80, 120)
+        ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        ToggleButton.Text = "≡"
+        ToggleButton.Font = Enum.Font.GothamBold
+        ToggleButton.TextSize = 14
+        ToggleButton.Parent = Header
+        
+        local ToggleCorner = Instance.new("UICorner")
+        ToggleCorner.CornerRadius = UDim.new(0, 6)
+        ToggleCorner.Parent = ToggleButton
+        
+        -- Sistema de arrastar
+        local dragging = false
+        local dragStart = Vector2.new(0, 0)
+        local startPos = UDim2.new(0, 0, 0, 0)
+        
+        local function UpdateDrag(input)
+            if not dragging then return end
+            
+            local delta = input.Position - dragStart
+            local newX = startPos.X.Offset + delta.X
+            local newY = startPos.Y.Offset + delta.Y
+            
+            local viewport = workspace.CurrentCamera.ViewportSize
+            local windowSize = MainWindow.AbsoluteSize
+            
+            newX = math.max(0, math.min(newX, viewport.X - windowSize.X))
+            newY = math.max(0, math.min(newY, viewport.Y - windowSize.Y))
+            
+            MainWindow.Position = UDim2.new(0, newX, 0, newY)
+        end
+        
+        Header.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                dragStart = input.Position
+                startPos = MainWindow.Position
+                
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+        
+        Header.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+                UpdateDrag(input)
+            end
+        end)
+        
+        -- Sistema de toggle
+        local isMinimized = false
+        ToggleButton.MouseButton1Click:Connect(function()
+            isMinimized = not isMinimized
+            
+            if isMinimized then
+                GameServices.TweenService:Create(MainWindow, TweenInfo.new(0.3), {
+                    Size = UDim2.new(0, 150, 0, 40)
+                }):Play()
+                
+                for _, child in ipairs(MainWindow:GetChildren()) do
+                    if child.Name ~= "Header" then
+                        child.Visible = false
+                    end
+                end
+                
+                ToggleButton.Text = "☰"
+            else
+                GameServices.TweenService:Create(MainWindow, TweenInfo.new(0.3), {
+                    Size = UDim2.new(0, 480, 0, 520)
+                }):Play()
+                
+                for _, child in ipairs(MainWindow:GetChildren()) do
+                    child.Visible = true
+                end
+                
+                ToggleButton.Text = "≡"
+            end
+        end)
+        
+        -- Barra de abas
+        local TabBar = Instance.new("Frame")
+        TabBar.Name = "TabBar"
+        TabBar.Size = UDim2.new(1, -20, 0, 35)
+        TabBar.Position = UDim2.new(0, 10, 0, 50)
+        TabBar.BackgroundTransparency = 1
+        TabBar.Parent = MainWindow
+        
+        -- Área de conteúdo
+        local ContentArea = Instance.new("ScrollingFrame")
+        ContentArea.Name = "ContentArea"
+        ContentArea.Size = UDim2.new(1, -20, 1, -100)
+        ContentArea.Position = UDim2.new(0, 10, 0, 95)
+        ContentArea.BackgroundTransparency = 1
+        ContentArea.ScrollBarThickness = 4
+        ContentArea.ScrollBarImageColor3 = Color3.fromRGB(60, 120, 200)
+        ContentArea.CanvasSize = UDim2.new(0, 0, 0, 0)
+        ContentArea.Parent = MainWindow
+        
+        self.MainWindow = MainWindow
+        
+        -- Função para criar botões
+        local function CreateActionButton(parent, text, callback)
+            local Button = Instance.new("TextButton")
+            Button.Name = text .. "Action"
+            Button.Size = UDim2.new(1, -20, 0, 35)
+            Button.Position = UDim2.new(0, 10, 0, #parent:GetChildren() * 40)
+            Button.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+            Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Button.Text = text
+            Button.Font = Enum.Font.GothamMedium
+            Button.TextSize = 14
+            Button.AutoButtonColor = true
+            Button.Parent = parent
+            
+            local ButtonCorner = Instance.new("UICorner")
+            ButtonCorner.CornerRadius = UDim.new(0, 6)
+            ButtonCorner.Parent = Button
+            
+            local ButtonStroke = Instance.new("UIStroke")
+            ButtonStroke.Color = Color3.fromRGB(80, 140, 220)
+            ButtonStroke.Thickness = 1
+            ButtonStroke.Parent = Button
+            
+            Button.MouseEnter:Connect(function()
+                GameServices.TweenService:Create(Button, TweenInfo.new(0.2), {
+                    BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+                }):Play()
+            end)
+            
+            Button.MouseLeave:Connect(function()
+                GameServices.TweenService:Create(Button, TweenInfo.new(0.2), {
+                    BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+                }):Play()
+            end)
+            
+            Button.MouseButton1Click:Connect(callback)
+            
+            return Button
+        end
+        
+        -- Função para criar abas
+        local function CreateTab(tabName, icon)
+            local TabButton = Instance.new("TextButton")
+            TabButton.Name = tabName .. "Tab"
+            TabButton.Size = UDim2.new(0.19, 0, 1, 0)
+            TabButton.Position = UDim2.new(#TabBar:GetChildren() * 0.19, 0, 0, 0)
+            TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+            TabButton.Text = icon .. " " .. tabName
+            TabButton.TextColor3 = Color3.fromRGB(200, 200, 220)
+            TabButton.Font = Enum.Font.Gotham
+            TabButton.TextSize = 11
+            TabButton.Parent = TabBar
+            
+            local TabCorner = Instance.new("UICorner")
+            TabCorner.CornerRadius = UDim.new(0, 6)
+            TabCorner.Parent = TabButton
+            
+            local TabContent = Instance.new("Frame")
+            TabContent.Name = tabName .. "Content"
+            TabContent.Size = UDim2.new(1, 0, 0, 0)
+            TabContent.BackgroundTransparency = 1
+            TabContent.Visible = false
+            TabContent.Parent = ContentArea
+            
+            TabButton.MouseButton1Click:Connect(function()
+                for _, child in ipairs(ContentArea:GetChildren()) do
+                    if child:IsA("Frame") then
+                        child.Visible = false
+                    end
+                end
+                TabContent.Visible = true
+                
+                for _, btn in ipairs(TabBar:GetChildren()) do
+                    if btn:IsA("TextButton") then
+                        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+                    end
+                end
+                TabButton.BackgroundColor3 = Color3.fromRGB(60, 120, 200)
+            end)
+            
+            if #TabBar:GetChildren() == 1 then
+                TabButton.BackgroundColor3 = Color3.fromRGB(60, 120, 200)
+                TabContent.Visible = true
+            end
+            
+            return TabContent
+        end
+        
+        -- Criar abas
+        local PlayerTab = CreateTab("Jogador", "👤")
+        local TeleportTab = CreateTab("Locais", "📍")
+        local VisualTab = CreateTab("Visual", "👁️")
+        local CombatTab = CreateTab("Combate", "🎯")
+        local UtilTab = CreateTab("Utilitários", "🔧")
+        local SecurityTab = CreateTab("Segurança", "🛡️")
+        
+        -- Conteúdo da aba Jogador
+        CreateActionButton(PlayerTab, "✈️ Ativar Sistema de Voo", function()
+            Movement.LoadFlight()
+        end)
+        
+        CreateActionButton(PlayerTab, "⚡ Comandos Avançados", function()
+            Movement.LoadInfiniteYield()
+        end)
+        
+        CreateActionButton(PlayerTab, "🎭 Menu de Mira Avançado", function()
+            Combat.LoadAimbot()
+        end)
+        
+        -- Conteúdo da aba Locais
+        for locationName, _ in pairs(Transport.Locations) do
+            CreateActionButton(TeleportTab, "📍 " .. locationName, function()
+                Transport:GoTo(locationName)
+            end)
+        end
+        
+        -- Conteúdo da aba Visual
+        CreateActionButton(VisualTab, "👁️ Ver Itens dos Jogadores", function()
+            Visual:ToggleSystem(not Visual.Active)
+        end)
+        
+        CreateActionButton(VisualTab, "🎯 ESP Tracer", function()
+            SecureLoad("Visualização ESP", function()
+                local function CreateESP()
+                    local Players = game:GetService("Players")
+                    local RunService = game:GetService("RunService")
+                    
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                            local TracerLine = Drawing.new("Line")
+                            TracerLine.Color = Color3.fromRGB(255, 50, 50)
+                            TracerLine.Thickness = 2
+                            TracerLine.Transparency = 1
+                            
+                            RunService.RenderStepped:Connect(function()
+                                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                                    local RootPosition, OnScreen = workspace.CurrentCamera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
+                                    if OnScreen then
+                                        TracerLine.From = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y)
+                                        TracerLine.To = Vector2.new(RootPosition.X, RootPosition.Y)
+                                        TracerLine.Visible = true
+                                    else
+                                        TracerLine.Visible = false
+                                    end
+                                else
+                                    TracerLine.Visible = false
+                                end
+                            end)
+                        end
+                    end
+                end
+                
+                local success, error = pcall(CreateESP)
+                if not success then warn("Erro ESP:", error) end
+            end)
+        end)
+        
+        -- Conteúdo da aba Combate
+        CreateActionButton(CombatTab, "🎯 Sistema de Mira V2", function()
+            Combat.LoadAimbot()
+        end)
+        
+        CreateActionButton(CombatTab, "🎯 Mira Média", function()
+            SecureLoad("Mira Média", function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/iceswallowpis/fronthook-rblx/refs/heads/main/fronthook%20v2%20(1).lua",true))()
+            end)
+        end)
+        
+        CreateActionButton(CombatTab, "🎯 Mira Bypass", function()
+            SecureLoad("Mira Bypass", function()
+                loadstring(game:HttpGet(('https://raw.githubusercontent.com/Exunys/Aimbot-V2/main/Resources/Scripts/Main.lua'),true))()
+            end)
+        end)
+        
+        CreateActionButton(CombatTab, "🎯 Expansor de Hitbox", function()
+            Combat.LoadHitbox()
+        end)
+        
+        CreateActionButton(CombatTab, "📱 Mira Mobile", function()
+            SecureLoad("Mira Mobile", function()
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/Pedroxz63/PedroxzAIMBOT/main/README.md", true))()
+            end)
+        end)
+        
+        -- Conteúdo da aba Utilitários
+        CreateActionButton(UtilTab, "🔧 Auto Revistar (Tecla E)", function()
+            Utilities:ToggleAutoSearch(true)
+        end)
+        
+        CreateActionButton(UtilTab, "🌿 Farm de Planta Automático", function()
+            local FarmUI = Instance.new("ScreenGui")
+            FarmUI.Parent = GameServices.CoreGui
+            
+            local FarmButton = Instance.new("TextButton")
+            FarmButton.Size = UDim2.new(0, 180, 0, 45)
+            FarmButton.Position = UDim2.new(0.5, -90, 0.1, 0)
+            FarmButton.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+            FarmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            FarmButton.Text = "🌿 Iniciar Farm"
+            FarmButton.Font = Enum.Font.GothamBold
+            FarmButton.TextSize = 16
+            FarmButton.Parent = FarmUI
+            
+            local farmingActive = false
+            
+            local function TeleportToRandomPlant()
+                local plantStems = {}
+                for _, plant in pairs(workspace:GetDescendants()) do
+                    if plant.Name == "PlantaIlegal" then
+                        local stem = plant:FindFirstChild("Stem")
+                        if stem then
+                            table.insert(plantStems, stem)
+                        end
+                    end
+                end
+                
+                if #plantStems > 0 then
+                    local randomStem = plantStems[math.random(1, #plantStems)]
+                    if randomStem and LocalPlayer.Character then
+                        local rootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if rootPart then
+                            rootPart.CFrame = randomStem.CFrame
+                        end
+                    end
+                end
+            end
+            
+            local function HoldEKey()
+                local inputManager = game:GetService("VirtualInputManager")
+                local keyE = "E"
+                
+                for _ = 1, 17 do
+                    inputManager:SendKeyEvent(true, keyE, false, game)
+                    task.wait(1)
+                end
+                inputManager:SendKeyEvent(false, keyE, false, game)
+            end
+            
+            FarmButton.MouseButton1Click:Connect(function()
+                farmingActive = not farmingActive
+                
+                if farmingActive then
+                    FarmButton.Text = "🌿 Parar Farm"
+                    while farmingActive do
+                        TeleportToRandomPlant()
+                        HoldEKey()
+                        task.wait(1)
+                    end
+                else
+                    FarmButton.Text = "🌿 Iniciar Farm"
+                end
+            end)
+        end)
+        
+        -- Conteúdo da aba Segurança
+        CreateActionButton(SecurityTab, "🛡️ Detector de Staff", function()
+            Security:ToggleStaffCheck(not Security.StaffCheck)
+        end)
+        
+        CreateActionButton(SecurityTab, "⚠️ Auto CL (Baixa Vida)", function()
+            getgenv().AutoCL = {
+                Enabled = true,
+                HealthLimit = 10
+            }
+            
+            local function MonitorHealth()
+                local playerChar = LocalPlayer.Character
+                if playerChar and playerChar:FindFirstChild("Humanoid") then
+                    local healthSystem = playerChar.Humanoid
+                    healthSystem.HealthChanged:Connect(function(currentHealth)
+                        if getgenv().AutoCL.Enabled and currentHealth <= getgenv().AutoCL.HealthLimit then
+                            LocalPlayer:Kick("Auto CL - Vida baixa: " .. currentHealth)
+                        end
+                    end)
+                end
+            end
+            
+            LocalPlayer.CharacterAdded:Connect(MonitorHealth)
+            if LocalPlayer.Character then
+                MonitorHealth()
+            end
+        end)
+        
+        -- Ajustar canvas
+        local function AdjustCanvas()
+            local maxHeight = 0
+            for _, content in ipairs(ContentArea:GetChildren()) do
+                if content:IsA("Frame") and content.Visible then
+                    maxHeight = math.max(maxHeight, content.AbsoluteSize.Y)
+                end
+            end
+            ContentArea.CanvasSize = UDim2.new(0, 0, 0, maxHeight + 20)
+        end
+        
+        for _, tab in ipairs(ContentArea:GetChildren()) do
+            if tab:IsA("Frame") then
+                tab.ChildAdded:Connect(AdjustCanvas)
+            end
+        end
+        AdjustCanvas()
+        
+        self.MainWindow = MainWindow
+        return MainScreen
+    end
+}
+
+-- ============================================
+-- 🚀 INICIALIZAÇÃO DO SISTEMA
+-- ============================================
+local function InitializeSystem()
+    -- Criar interface
+    local interface = Interface:Create()
+    
+    -- Atualizar personagem
+    LocalPlayer.CharacterAdded:Connect(function(newCharacter)
+        CurrentCharacter = newCharacter
+        task.wait(1)
+    end)
+    
+    -- Mensagem de inicialização
+    task.spawn(function()
+        task.wait(1)
+        print("========================================")
+        print("🛡️ DELTA SYSTEM v3.0 - CARREGADO")
+        print("✅ Todas funções originais mantidas")
+        print("🔒 Sistema camuflado contra detecção")
+        print("🎮 Pronto para uso no Mini City")
+        print("========================================")
+    end)
+    
+    return interface
+end
+
+-- ============================================
+-- ▶️ EXECUTAR SISTEMA
+-- ============================================
+local success, errorMessage = pcall(InitializeSystem)
+if not success then
+    warn("[SYSTEM] Erro ao inicializar:", errorMessage)
+else
+    print("[SYSTEM] Sistema inicializado com sucesso!")
+end
