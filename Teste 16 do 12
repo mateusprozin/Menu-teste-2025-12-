@@ -1,0 +1,578 @@
+-- Mini City RP - FreeHubV2 com correções
+-- Colar em StarterPlayer -> StarterPlayerScripts
+
+-- Carregar Linoria Library
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+-- Services
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+-- Helpers
+local function notify(title, text, duration)
+    Library:Notify(title .. ": " .. text, duration or 4)
+end
+
+-- Função para ativar ProximityPrompts
+local function activatePrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") then return false end
+    
+    local success = false
+    
+    pcall(function()
+        prompt.HoldDuration = 0
+        prompt.MaxActivationDistance = 9999
+        prompt.RequiresLineOfSight = false
+    end)
+    
+    pcall(function()
+        if fireproximityprompt then
+            fireproximityprompt(prompt)
+            success = true
+        end
+    end)
+    
+    if not success then
+        pcall(function()
+            prompt:InputHoldBegin()
+            task.wait(0.1)
+            prompt:InputHoldEnd()
+            success = true
+        end)
+    end
+    
+    return success
+end
+
+-- Função para encontrar o ProximityPrompt mais próximo
+local function findNearestPrompt(maxDistance)
+    maxDistance = maxDistance or 20
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    
+    local hrp = char.HumanoidRootPart
+    local nearest = nil
+    local nearestDist = maxDistance
+    
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") and obj.Enabled then
+            local parent = obj.Parent
+            if parent and parent:IsA("BasePart") then
+                local dist = (parent.Position - hrp.Position).Magnitude
+                if dist < nearestDist then
+                    nearest = obj
+                    nearestDist = dist
+                end
+            end
+        end
+    end
+    
+    return nearest, nearestDist
+end
+
+local function tryEquipTool(tool)
+    if not tool then return end
+    local backpack = LocalPlayer:FindFirstChild("Backpack") or LocalPlayer:WaitForChild("Backpack")
+    pcall(function() tool.Parent = backpack end)
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        local humanoid = char.Humanoid
+        pcall(function()
+            if typeof(humanoid.EquipTool) == "function" then
+                humanoid:EquipTool(tool)
+            else
+                tool.Parent = char
+            end
+        end)
+    end
+end
+
+local function findPlayerInventoryContainer(plr)
+    if not plr then return nil end
+    return plr:FindFirstChild("Inv") or plr:FindFirstChild("Inventory") or plr:FindFirstChild("Backpack")
+end
+
+-- Criar Window
+local Window = Library:CreateWindow({
+    Title = "FreeHubV2",
+    Footer = "by OfficialPatozoid",
+    Icon = 6274377121,
+    NotifySide = "Right",
+    ShowCustomCursor = true,
+})
+
+-- Criar Tabs
+local Tabs = {
+    AutoFarm = Window:AddTab("AutoFarm", "package"),
+    Teleports = Window:AddTab("Teleports", "map-pin"),
+    Combate = Window:AddTab("Combate", "sword"),
+    Settings = Window:AddTab("UI Settings", "settings"),
+}
+
+-- ========== AutoFarm Tab ==========
+local AutoFarmBox = Tabs.AutoFarm:AddLeftGroupbox("Farms Automáticos", "zap")
+local AutoFarmControls = Tabs.AutoFarm:AddRightGroupbox("Controles", "settings")
+
+-- Controles do AutoFarm
+local currentTrashIndex = 0
+local trashList = {}
+
+local function updateTrashList()
+    trashList = {}
+    local ok, folder = pcall(function()
+        return Workspace:FindFirstChild("MapaGeral") and 
+               Workspace.MapaGeral:FindFirstChild("Gari") and 
+               Workspace.MapaGeral.Gari:FindFirstChild("Lixos")
+    end)
+    
+    if ok and folder then
+        for _, part in ipairs(folder:GetChildren()) do
+            if part:IsA("BasePart") then
+                local hasPrompt = false
+                for _, desc in ipairs(part:GetDescendants()) do
+                    if desc:IsA("ProximityPrompt") and desc.Enabled then
+                        hasPrompt = true
+                        break
+                    end
+                end
+                if hasPrompt then
+                    table.insert(trashList, part)
+                end
+            end
+        end
+    end
+    return #trashList
+end
+
+local function goToTrash(index)
+    if #trashList == 0 then
+        updateTrashList()
+    end
+    
+    if #trashList > 0 and LocalPlayer.Character and 
+       LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local target = trashList[index]
+        if target then
+            pcall(function()
+                LocalPlayer.Character.HumanoidRootPart.CFrame = target.CFrame + Vector3.new(0, 5, 0)
+            end)
+            task.wait(0.3)
+            
+            for _, desc in ipairs(target:GetDescendants()) do
+                if desc:IsA("ProximityPrompt") and desc.Enabled then
+                    activatePrompt(desc)
+                end
+            end
+            
+            local nearPrompt = findNearestPrompt(15)
+            if nearPrompt then
+                activatePrompt(nearPrompt)
+            end
+        end
+    end
+end
+
+AutoFarmControls:AddSlider("GariDelay", {
+    Text = "Tempo por Lixo (segundos)",
+    Tooltip = "Tempo de espera entre cada lixo",
+    Default = 2,
+    Min = 0.5,
+    Max = 10,
+    Rounding = 1,
+    Compact = false
+})
+
+AutoFarmControls:AddButton({
+    Text = "🔄 Atualizar Lista de Lixos",
+    Tooltip = "Atualiza a lista de lixos disponíveis",
+    Func = function()
+        local count = updateTrashList()
+        notify("Gari", count .. " lixos encontrados", 3)
+        currentTrashIndex = 0
+    end
+})
+
+AutoFarmControls:AddButton({
+    Text = "⏭️ Próximo Lixo",
+    Tooltip = "Pula para o próximo lixo da lista",
+    Func = function()
+        updateTrashList()
+        if #trashList > 0 then
+            currentTrashIndex = currentTrashIndex + 1
+            if currentTrashIndex > #trashList then
+                currentTrashIndex = 1
+            end
+            goToTrash(currentTrashIndex)
+            notify("Gari", "Indo para lixo " .. currentTrashIndex .. "/" .. #trashList, 2)
+        else
+            notify("Gari", "Nenhum lixo encontrado", 2)
+        end
+    end
+})
+
+AutoFarmControls:AddButton({
+    Text = "⏮️ Lixo Anterior",
+    Tooltip = "Volta para o lixo anterior",
+    Func = function()
+        updateTrashList()
+        if #trashList > 0 then
+            currentTrashIndex = currentTrashIndex - 1
+            if currentTrashIndex < 1 then
+                currentTrashIndex = #trashList
+            end
+            goToTrash(currentTrashIndex)
+            notify("Gari", "Indo para lixo " .. currentTrashIndex .. "/" .. #trashList, 2)
+        else
+            notify("Gari", "Nenhum lixo encontrado", 2)
+        end
+    end
+})
+
+AutoFarmControls:AddDivider()
+AutoFarmControls:AddLabel("Lixos: 0/0", false, "GariStatus")
+
+-- Gari Toggle
+local gariRunning = false
+AutoFarmBox:AddToggle("GariToggle", {
+    Text = "Gari (Coletar Lixo)",
+    Tooltip = "Coleta lixo automaticamente",
+    Default = false,
+    Callback = function(value)
+        gariRunning = value
+        if value then
+            notify("Gari", "Ativado - Coletando lixo...", 2)
+            task.spawn(function()
+                while gariRunning do
+                    local delay = Options.GariDelay and Options.GariDelay.Value or 2
+                    local count = updateTrashList()
+                    
+                    if count > 0 then
+                        currentTrashIndex = currentTrashIndex + 1
+                        if currentTrashIndex > #trashList then
+                            currentTrashIndex = 1
+                        end
+                        
+                        pcall(function()
+                            Options.GariStatus:SetText("Lixos: " .. currentTrashIndex .. "/" .. #trashList)
+                        end)
+                        
+                        goToTrash(currentTrashIndex)
+                    else
+                        pcall(function()
+                            Options.GariStatus:SetText("Lixos: 0/0 - Aguardando spawn...")
+                        end)
+                    end
+                    
+                    task.wait(delay)
+                end
+                
+                pcall(function()
+                    Options.GariStatus:SetText("Lixos: 0/0")
+                end)
+            end)
+        else
+            notify("Gari", "Desativado", 2)
+            currentTrashIndex = 0
+        end
+    end
+})
+
+-- Entregador de Gás Toggle
+local gasRunning = false
+AutoFarmBox:AddToggle("GasToggle", {
+    Text = "Entregador de Gás",
+    Tooltip = "Entrega botijões de gás automaticamente",
+    Default = false,
+    Callback = function(value)
+        gasRunning = value
+        if value then
+            task.spawn(function()
+                while gasRunning do
+                    local ok, gasPlace = pcall(function()
+                        return Workspace:FindFirstChild("MapaGeral") and 
+                               Workspace.MapaGeral:FindFirstChild("GasPlace")
+                    end)
+                    
+                    if ok and gasPlace then
+                        local children = gasPlace:GetChildren()
+                        local target = children[4]
+                        
+                        if target and target:IsA("BasePart") then
+                            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                            if hrp then
+                                pcall(function() 
+                                    hrp.CFrame = target.CFrame + Vector3.new(0, 5, 0) 
+                                end)
+                                task.wait(0.3)
+                            end
+                            
+                            local activated = false
+                            for _, desc in ipairs(target:GetDescendants()) do
+                                if desc:IsA("ProximityPrompt") then
+                                    if activatePrompt(desc) then
+                                        activated = true
+                                    end
+                                end
+                            end
+                            
+                            if not activated then
+                                local nearPrompt = findNearestPrompt(15)
+                                if nearPrompt then
+                                    activatePrompt(nearPrompt)
+                                end
+                            end
+                            
+                            pcall(function()
+                                local inv = findPlayerInventoryContainer(LocalPlayer)
+                                if inv then
+                                    local names = {"botijão de gás", "botijao de gás", "botijao de gas", "botijão", "botijao"}
+                                    for _, nm in ipairs(names) do
+                                        local item = inv:FindFirstChild(nm)
+                                        if item then
+                                            tryEquipTool(item)
+                                            break
+                                        end
+                                    end
+                                end
+                            end)
+                        end
+                    end
+                    task.wait(2)
+                end
+            end)
+        end
+    end
+})
+
+-- ========== Teleports Tab ==========
+local TeleportBox = Tabs.Teleports:AddLeftGroupbox("Localizações", "map")
+local PlayerTPBox = Tabs.Teleports:AddRightGroupbox("Teleport para Players", "users")
+
+local teleports = {
+    {"Prefeitura", CFrame.new(-290.019073, 12.1575041, 117.960487)},
+    {"Consessionaria", CFrame.new(-99.0479813, 4.21515226, 484.828644)},
+    {"Praça", CFrame.new(-290.886688, 1.04274726, 363.851135)},
+    {"Garagem", CFrame.new(-467.519714, 1.77299166, 354.178314)},
+    {"Gari", CFrame.new(-518.672852, 2.16749811, -1.16962147)},
+    {"Entregador de gás", CFrame.new(-469.959015, 2.25349784, -54.3936005)},
+    {"Posto", CFrame.new(-535.79834, 1.23799801, 157.073685)}
+}
+
+for _, tp in ipairs(teleports) do
+    TeleportBox:AddButton({
+        Text = tp[1],
+        Tooltip = "Teleportar para " .. tp[1],
+        Func = function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                pcall(function()
+                    LocalPlayer.Character.HumanoidRootPart.CFrame = tp[2] + Vector3.new(0, 5, 0)
+                end)
+                notify("Teleport", "→ " .. tp[1], 2)
+            end
+        end
+    })
+end
+
+-- Teleport para Players
+local playersList = {}
+local selectedPlayer = nil
+
+local function updatePlayersList()
+    playersList = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            table.insert(playersList, plr.Name)
+        end
+    end
+    return playersList
+end
+
+PlayerTPBox:AddDropdown("PlayerSelect", {
+    Values = updatePlayersList(),
+    Default = "",
+    Text = "Selecionar Player",
+    Tooltip = "Escolha um jogador para teleportar"
+})
+
+PlayerTPBox:AddButton({
+    Text = "🔄 Atualizar Lista",
+    Tooltip = "Atualiza a lista de jogadores",
+    Func = function()
+        local list = updatePlayersList()
+        Options.PlayerSelect:SetValues(list)
+        notify("Players", #list .. " jogadores online", 2)
+    end
+})
+
+PlayerTPBox:AddButton({
+    Text = "📍 Teleportar para Player",
+    Tooltip = "Teleporta para o jogador selecionado",
+    Func = function()
+        local selected = Options.PlayerSelect.Value
+        if selected and selected ~= "" then
+            local targetPlayer = Players:FindFirstChild(selected)
+            if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    pcall(function()
+                        LocalPlayer.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                    end)
+                    notify("Teleport", "→ " .. selected, 2)
+                end
+            else
+                notify("Erro", "Player não encontrado ou sem personagem", 3)
+            end
+        else
+            notify("Erro", "Selecione um player primeiro", 2)
+        end
+    end
+})
+
+PlayerTPBox:AddToggle("FollowPlayer", {
+    Text = "Seguir Player",
+    Tooltip = "Segue o jogador selecionado automaticamente",
+    Default = false
+})
+
+PlayerTPBox:AddSlider("FollowDistance", {
+    Text = "Distância de Seguir",
+    Default = 5,
+    Min = 2,
+    Max = 20,
+    Rounding = 0,
+    Compact = false
+})
+
+-- ========== Combate Tab ==========
+local CombateBox = Tabs.Combate:AddLeftGroupbox("PvP & Combate", "sword")
+local ESPSettings = Tabs.Combate:AddRightGroupbox("Configurações ESP", "eye")
+
+-- Configurações ESP
+ESPSettings:AddToggle("ShowPlayerNames", {
+    Text = "Mostrar Nomes",
+    Tooltip = "Mostra nomes dos jogadores no ESP",
+    Default = true
+})
+
+ESPSettings:AddToggle("ShowDistance", {
+    Text = "Mostrar Distância",
+    Tooltip = "Mostra distância dos jogadores",
+    Default = true
+})
+
+ESPSettings:AddToggle("ShowHealth", {
+    Text = "Mostrar Vida",
+    Tooltip = "Mostra barra de vida dos jogadores",
+    Default = true
+})
+
+ESPSettings:AddToggle("ShowInventory", {
+    Text = "Mostrar Inventário",
+    Tooltip = "Mostra itens do inventário",
+    Default = true
+})
+
+ESPSettings:AddLabel("Cores do ESP"):AddColorPicker("ESPColor", {
+    Default = Color3.fromRGB(255, 80, 80),
+    Title = "Cor do Highlight",
+    Transparency = 0.6,
+})
+
+ESPSettings:AddSlider("ESPTransparency", {
+    Text = "Transparência",
+    Default = 0.6,
+    Min = 0,
+    Max = 1,
+    Rounding = 2,
+    Compact = false
+})
+
+-- ESP
+local espActive = false
+local espHighlights = {}
+local espBillboards = {}
+
+local function clearESPForPlayer(plr)
+    if espHighlights[plr] then
+        pcall(function() espHighlights[plr]:Destroy() end)
+        espHighlights[plr] = nil
+    end
+    if espBillboards[plr] then
+        pcall(function() espBillboards[plr]:Destroy() end)
+        espBillboards[plr] = nil
+    end
+end
+
+local function updateESP()
+    if not espActive then return end
+    
+    local showNames = Toggles.ShowPlayerNames and Toggles.ShowPlayerNames.Value or false
+    local showDist = Toggles.ShowDistance and Toggles.ShowDistance.Value or false
+    local showHealth = Toggles.ShowHealth and Toggles.ShowHealth.Value or false
+    local showInv = Toggles.ShowInventory and Toggles.ShowInventory.Value or false
+    local espColor = Options.ESPColor and Options.ESPColor.Value or Color3.fromRGB(255, 80, 80)
+    local espTrans = Options.ESPTransparency and Options.ESPTransparency.Value or 0.6
+    
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            if not espHighlights[plr] or not espHighlights[plr].Parent then
+                pcall(function()
+                    local highlight = Instance.new("Highlight")
+                    highlight.Name = "FreeHubESP"
+                    highlight.Adornee = plr.Character
+                    highlight.FillColor = espColor
+                    highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+                    highlight.FillTransparency = espTrans
+                    highlight.OutlineTransparency = 0
+                    highlight.Parent = plr.Character
+                    espHighlights[plr] = highlight
+                end)
+            else
+                pcall(function()
+                    espHighlights[plr].FillColor = espColor
+                    espHighlights[plr].FillTransparency = espTrans
+                end)
+            end
+            
+            if not espBillboards[plr] or not espBillboards[plr].Parent then
+                pcall(function()
+                    local head = plr.Character:FindFirstChild("Head")
+                    if head then
+                        local bb = Instance.new("BillboardGui")
+                        bb.Name = "InfoLabel"
+                        bb.Size = UDim2.new(0, 200, 0, 100)
+                        bb.Adornee = head
+                        bb.AlwaysOnTop = true
+                        bb.StudsOffset = Vector3.new(0, 2, 0)
+                        
+                        local label = Instance.new("TextLabel", bb)
+                        label.Name = "Label"
+                        label.Size = UDim2.new(1, 0, 1, 0)
+                        label.BackgroundTransparency = 1
+                        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        label.TextSize = 14
+                        label.Font = Enum.Font.GothamBold
+                        label.TextStrokeTransparency = 0
+                        label.TextYAlignment = Enum.TextYAlignment.Top
+                        
+                        bb.Parent = head
+                        espBillboards[plr] = bb
+                    end
+                end)
+            end
+            
+            if espBillboards[plr] and espBillboards[plr]:FindFirstChild("Label") then
+                pcall(function()
+                    local texts = {}
+                    
+                    if showNames then
+                    
